@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Build Tauri app
-        run: npm run tauri build -- --bundles nsis,app
+        run: npm run tauri build -- --bundles nsis
 
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
