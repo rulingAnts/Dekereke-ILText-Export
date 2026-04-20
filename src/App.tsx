@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { openXmlFile, exportData, type ParsedData, type SortKey } from "./backend";
 import {
   DndContext,
   closestCenter,
@@ -18,15 +18,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-interface ParsedData {
-  columns: string[];
-  rows: Record<string, string>[];
-}
-
-interface SortKey {
-  column: string;
-  direction: "asc" | "desc";
-}
 
 function SortableColumnItem({
   id,
@@ -74,6 +65,7 @@ export default function App() {
   const [enabledColumns, setEnabledColumns] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortKey[]>([]);
   const [exportType, setExportType] = useState<"flex" | "excel">("flex");
+  const [outputText, setOutputText] = useState<string>("");
   const [status, setStatus] = useState<{ text: string; ok: boolean } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -88,7 +80,7 @@ export default function App() {
     setIsLoading(true);
     setStatus(null);
     try {
-      const data = await invoke<ParsedData>("open_xml_file");
+      const data = await openXmlFile();
       setParsedData(data);
       setColumnOrder(data.columns);
       setEnabledColumns(new Set(data.columns));
@@ -154,13 +146,14 @@ export default function App() {
     setStatus(null);
     try {
       const activeColumns = columnOrder.filter((c) => enabledColumns.has(c));
-      const result = await invoke<string>("export_data", {
-        rows: parsedData.rows,
-        columnOrder: activeColumns,
+      const result = await exportData(
+        parsedData.rows,
+        activeColumns,
         sortConfig,
-        exportType,
-      });
-      setStatus({ text: result, ok: true });
+        exportType
+      );
+      setOutputText(result.text);
+      setStatus({ text: result.summary, ok: true });
     } catch (err) {
       const msg = String(err);
       if (msg !== "No save location selected") {
@@ -289,7 +282,7 @@ export default function App() {
               disabled={isLoading || enabledColumns.size === 0}
               className="btn-primary btn-export"
             >
-              Export…
+              Generate output
             </button>
           </section>
         </>
@@ -299,6 +292,28 @@ export default function App() {
         <div className={`status ${status.ok ? "status-ok" : "status-error"}`}>
           {status.text}
         </div>
+      )}
+
+      {outputText && (
+        <section className="section output-section">
+          <div className="output-header">
+            <h2>Output</h2>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                navigator.clipboard.writeText(outputText);
+              }}
+            >
+              Copy all
+            </button>
+          </div>
+          <textarea
+            className="output-textarea"
+            readOnly
+            value={outputText}
+            spellCheck={false}
+          />
+        </section>
       )}
     </div>
   );
