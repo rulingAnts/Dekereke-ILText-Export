@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(cargo check *)",
+      "Bash(python3 -c ' *)",
+      "Bash(gh auth *)",
+      "Bash(git init *)"
+    ]
+  }
+}
